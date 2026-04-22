@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
-type TrackType = 'Progetto lungo' | 'Mashup / fan edit' | 'Singolo / brano';
+type TrackType = 'Progetto lungo' | 'Mashup / fan edit';
 
 type Track = {
   title: string;
@@ -15,7 +15,7 @@ type Track = {
 
 type ApiTrack = {
   title: string;
-  type: TrackType;
+  type: TrackType | 'Singolo / brano';
   duration: string;
   publishedLabel: string;
   videoId: string;
@@ -38,6 +38,11 @@ type AppleRelease = {
 
 declare global {
   interface Window {
+    instgrm?: {
+      Embeds?: {
+        process: () => void;
+      };
+    };
     YT?: {
       Player: new (
         elementId: string,
@@ -96,6 +101,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly artistName = 'YNG ERRE';
   protected readonly channelUrl = 'https://www.youtube.com/channel/UC6kUWPUTwPd92a1xc9ubSfg';
   protected readonly appleMusicArtistUrl = 'https://music.apple.com/it/artist/yng-erre/1615633683';
+  protected readonly instagramUrl = 'https://www.instagram.com/yngerreproductions/';
   protected readonly linkBioUrl = 'https://lnk.bio/yngerre';
 
   protected readonly appleReleases: AppleRelease[] = [
@@ -125,8 +131,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly filters: Array<'Tutti' | TrackType> = [
     'Tutti',
     'Progetto lungo',
-    'Mashup / fan edit',
-    'Singolo / brano'
+    'Mashup / fan edit'
   ];
 
   protected readonly tracks = signal<Track[]>([]);
@@ -171,7 +176,7 @@ export class App implements OnInit, OnDestroy {
       {
         title: 'Mashup e fan edit',
         meta: `${mashupCount} video`,
-        detail: 'I mashup restano nel percorso YouTube, distinti dalle uscite ufficiali presenti su Apple Music.'
+        detail: 'Mashup, fan edit e singoli YouTube condividono lo stesso spazio, distinti dalle uscite ufficiali su Apple Music.'
       }
     ];
   });
@@ -183,6 +188,7 @@ export class App implements OnInit, OnDestroy {
   ngOnInit(): void {
     void this.loadVideos();
     void this.initializeYouTubeApi();
+    void this.initializeInstagramEmbeds();
     window.addEventListener('resize', this.handleWindowResize);
     this.refreshIntervalId = setInterval(() => {
       void this.loadVideos();
@@ -404,7 +410,7 @@ export class App implements OnInit, OnDestroy {
       }
 
       const payload = (await response.json()) as { fetchedAt?: string; items?: ApiTrack[] };
-      const items = Array.isArray(payload.items) ? payload.items : [];
+      const items = Array.isArray(payload.items) ? payload.items.map((track) => this.normalizeTrack(track)) : [];
       const mergedQueue = this.mergeQueueWithFreshTracks(this.playbackQueue(), items);
 
       this.tracks.set(items);
@@ -455,6 +461,35 @@ export class App implements OnInit, OnDestroy {
     });
 
     this.createYoutubePlayer();
+  }
+
+  private async initializeInstagramEmbeds(): Promise<void> {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (window.instgrm?.Embeds) {
+      window.instgrm.Embeds.process();
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const existingScript = document.querySelector('script[src="https://www.instagram.com/embed.js"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(), { once: true });
+        existingScript.addEventListener('error', () => resolve(), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://www.instagram.com/embed.js';
+      script.async = true;
+      script.addEventListener('load', () => resolve(), { once: true });
+      script.addEventListener('error', () => resolve(), { once: true });
+      document.body.appendChild(script);
+    });
+
+    window.instgrm?.Embeds?.process();
   }
 
   private createYoutubePlayer(): void {
@@ -580,6 +615,13 @@ export class App implements OnInit, OnDestroy {
     const appendedTracks = freshTracks.filter((track) => !preservedIds.has(track.videoId));
 
     return [...preservedOrder, ...appendedTracks];
+  }
+
+  private normalizeTrack(track: ApiTrack): Track {
+    return {
+      ...track,
+      type: track.type === 'Singolo / brano' ? 'Mashup / fan edit' : track.type
+    };
   }
 
   private shuffleTracks(tracks: Track[]): Track[] {
