@@ -42,6 +42,8 @@ declare global {
       Player: new (
         elementId: string,
         config: {
+          width?: string | number;
+          height?: string | number;
           videoId?: string;
           playerVars?: Record<string, string | number>;
           events?: {
@@ -362,6 +364,8 @@ export class App implements OnInit, OnDestroy {
 
     const initialVideoId = this.selectedYoutubeTrack()?.videoId ?? '';
     this.youtubePlayer = new window.YT.Player('youtube-player-host', {
+      width: '100%',
+      height: '100%',
       videoId: initialVideoId,
       playerVars: {
         autoplay: 1,
