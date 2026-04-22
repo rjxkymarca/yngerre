@@ -1,8 +1,12 @@
 :host {
   display: block;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 .shell {
+  width: 100%;
+  overflow-x: hidden;
   min-height: 100vh;
   color: var(--text-primary);
   background:
@@ -15,6 +19,8 @@
 .topbar {
   position: sticky;
   top: 0;
+  width: 100%;
+  max-width: 100%;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -30,6 +36,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  min-width: 0;
 }
 
 .brand-lockup h1,
@@ -63,6 +70,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .topnav a,
@@ -105,10 +113,12 @@
   gap: clamp(2rem, 5vw, 5rem);
   padding-top: clamp(2rem, 6vw, 5rem);
   padding-bottom: clamp(2.5rem, 8vw, 6rem);
+  min-width: 0;
 }
 
 .hero-copy {
   max-width: 44rem;
+  min-width: 0;
   animation: fade-up 700ms ease both;
 }
 
@@ -318,6 +328,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
   gap: 1.3rem;
+  min-width: 0;
 }
 
 .player-grid--apple {
@@ -327,6 +338,7 @@
 .video-panel,
 .queue-panel,
 .story-panel {
+  min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.09);
   background: rgba(255, 255, 255, 0.055);
   backdrop-filter: blur(26px);
@@ -344,6 +356,18 @@
   flex-direction: column;
   gap: 0.35rem;
   margin-bottom: 1rem;
+  min-width: 0;
+}
+
+.video-panel__meta h4,
+.video-panel__meta p,
+.track-item__body strong,
+.track-item__body small,
+.release-item strong,
+.release-item small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .video-panel__placeholder {
@@ -452,6 +476,7 @@
   margin-top: 1rem;
   color: var(--text-secondary);
   font-size: 0.92rem;
+  min-width: 0;
 }
 
 .video-panel__footer a {
@@ -511,6 +536,7 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
 }
 
 .track-item__main {
@@ -531,6 +557,7 @@
     transform 180ms ease,
     border-color 180ms ease,
     background 180ms ease;
+  min-width: 0;
 }
 
 .track-item__main:hover,
@@ -587,6 +614,7 @@
 .track-item__body {
   display: grid;
   gap: 0.3rem;
+  min-width: 0;
 }
 
 .track-item__body strong {
@@ -687,14 +715,36 @@
 }
 
 @media (max-width: 720px) {
+  .hero,
+  .player-section,
+  .release-section,
+  .story-section {
+    padding-inline: 0.85rem;
+  }
+
   .topbar,
   .video-panel__footer {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .topnav {
+  .topbar {
     gap: 0.9rem;
+    padding: 0.9rem 0.85rem;
+  }
+
+  .brand-lockup {
+    width: 100%;
+  }
+
+  .brand-lockup h1 {
+    font-size: clamp(2.3rem, 12vw, 3.4rem);
+    line-height: 0.95;
+  }
+
+  .topnav {
+    width: 100%;
+    gap: 0.65rem 1rem;
   }
 
   .hero-copy h2 {
@@ -708,7 +758,10 @@
   .video-panel,
   .queue-panel,
   .story-panel {
+    width: 100%;
+    max-width: 100%;
     border-radius: 1.5rem;
+    padding: 1rem;
   }
 
   .video-frame {
@@ -767,7 +820,7 @@
   }
 
   .track-item__duration {
-    grid-column: 2;
+    grid-column: 1 / -1;
     justify-self: start;
     font-size: 0.9rem;
   }

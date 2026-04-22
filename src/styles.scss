@@ -16,12 +16,14 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
   background: #0d0d11;
+  overflow-x: hidden;
 }
 
 button,
