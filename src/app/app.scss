@@ -360,11 +360,6 @@
   background: #09090c;
 }
 
-.video-frame.is-audio-focus {
-  aspect-ratio: auto;
-  height: 12.5rem;
-}
-
 .video-frame iframe,
 .music-frame iframe {
   width: 100%;
@@ -436,7 +431,6 @@
 }
 
 .control-button:hover,
-.control-button.is-active,
 .queue-action:hover {
   transform: translateY(-1px);
   border-color: rgba(255, 173, 196, 0.36);
@@ -737,9 +731,5 @@
 
   .music-frame {
     height: 34rem;
-  }
-
-  .video-frame.is-audio-focus {
-    height: 10rem;
   }
 }

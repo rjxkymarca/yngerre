@@ -134,7 +134,6 @@ export class App implements OnInit, OnDestroy {
   protected readonly lastUpdatedLabel = signal('');
   protected readonly isYoutubePlayerReady = signal(false);
   protected readonly isYoutubePlaying = signal(false);
-  protected readonly audioOnlyMode = signal(false);
 
   protected readonly filteredYoutubeTracks = computed(() => {
     const filter = this.activeFilter();
@@ -266,11 +265,6 @@ export class App implements OnInit, OnDestroy {
 
     this.youtubePlayer.playVideo();
     this.isYoutubePlaying.set(true);
-  }
-
-  protected toggleAudioOnlyMode(): void {
-    this.audioOnlyMode.update((value) => !value);
-    setTimeout(() => this.syncYoutubePlayerSize(), 0);
   }
 
   protected moveQueueItem(videoId: string, direction: -1 | 1): void {
@@ -446,7 +440,7 @@ export class App implements OnInit, OnDestroy {
     }
 
     const width = Math.max(Math.round(frame.clientWidth), 200);
-    const height = this.audioOnlyMode() ? 200 : Math.max(Math.round((width / 16) * 9), 270);
+    const height = Math.max(Math.round((width / 16) * 9), 270);
     this.youtubePlayer.setSize(width, height);
   }
 
