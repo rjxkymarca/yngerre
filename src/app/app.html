@@ -100,32 +100,56 @@
                 class="control-button"
                 [disabled]="!hasPreviousTrack()"
                 (click)="playPreviousTrack()"
+                aria-label="Video precedente"
+                title="Video precedente"
               >
-                Indietro
+                <span class="control-button__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M11 18V6l-8.5 6L11 18Zm1 0 8.5-6L12 6v12Z" />
+                  </svg>
+                </span>
               </button>
               <button
                 type="button"
                 class="control-button"
                 [disabled]="!isYoutubePlaying()"
                 (click)="pauseYoutubePlayback()"
+                aria-label="Pausa"
+                title="Pausa"
               >
-                Pausa
+                <span class="control-button__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M6 5h4v14H6V5Zm8 0h4v14h-4V5Z" />
+                  </svg>
+                </span>
               </button>
               <button
                 type="button"
                 class="control-button"
                 [disabled]="isYoutubePlaying() || !selectedYoutubeTrack()"
                 (click)="resumeYoutubePlayback()"
+                aria-label="Riprendi"
+                title="Riprendi"
               >
-                Riprendi
+                <span class="control-button__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M8 5v14l11-7L8 5Z" />
+                  </svg>
+                </span>
               </button>
               <button
                 type="button"
                 class="control-button"
                 [disabled]="!hasNextTrack()"
                 (click)="playNextTrack()"
+                aria-label="Video successivo"
+                title="Video successivo"
               >
-                Avanti
+                <span class="control-button__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="m13 18 8.5-6L13 6v12ZM4.5 18 13 12 4.5 6v12Z" />
+                  </svg>
+                </span>
               </button>
             </div>
 
