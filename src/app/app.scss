@@ -367,11 +367,58 @@
   border: 0;
 }
 
+.youtube-player-host {
+  width: 100%;
+  height: 100%;
+}
+
 .music-frame {
   overflow: hidden;
   border-radius: 1.6rem;
-  min-height: 33rem;
+  height: 42rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+}
+
+.player-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.control-button,
+.queue-action {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.control-button {
+  min-height: 2.9rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.control-button:hover,
+.queue-action:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 173, 196, 0.36);
+  background: rgba(255, 122, 160, 0.12);
+}
+
+.control-button:disabled,
+.queue-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .video-panel__footer {
@@ -438,6 +485,13 @@
 
 .track-item {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.track-item__main {
+  display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 1rem;
@@ -449,17 +503,31 @@
   background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
   text-align: left;
+  font: inherit;
   transition:
     transform 180ms ease,
     border-color 180ms ease,
     background 180ms ease;
 }
 
-.track-item:hover,
-.track-item.is-active {
+.track-item__main:hover,
+.track-item.is-active .track-item__main {
   transform: translateX(4px);
   border-color: rgba(255, 173, 196, 0.36);
   background: rgba(255, 122, 160, 0.12);
+}
+
+.track-item__actions {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.queue-action {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.9rem;
+  font: inherit;
+  font-weight: 800;
 }
 
 .release-item {
@@ -621,11 +689,24 @@
   }
 
   .track-item {
+    grid-template-columns: 1fr;
+  }
+
+  .track-item__main {
     grid-template-columns: auto 1fr;
   }
 
   .track-item__duration {
     grid-column: 2;
     justify-self: start;
+  }
+
+  .track-item__actions {
+    grid-auto-flow: column;
+    justify-content: end;
+  }
+
+  .music-frame {
+    height: 34rem;
   }
 }

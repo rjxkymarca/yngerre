@@ -36,6 +36,40 @@ type AppleRelease = {
   embedUrl: string;
 };
 
+declare global {
+  interface Window {
+    YT?: {
+      Player: new (
+        elementId: string,
+        config: {
+          videoId?: string;
+          playerVars?: Record<string, string | number>;
+          events?: {
+            onReady?: (event: { target: YouTubePlayer }) => void;
+            onStateChange?: (event: { data: number }) => void;
+          };
+        }
+      ) => YouTubePlayer;
+      PlayerState: {
+        ENDED: number;
+        PLAYING: number;
+        PAUSED: number;
+        BUFFERING: number;
+        CUED: number;
+      };
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+type YouTubePlayer = {
+  cueVideoById: (videoId: string) => void;
+  loadVideoById: (videoId: string) => void;
+  pauseVideo: () => void;
+  playVideo: () => void;
+  destroy: () => void;
+};
+
 @Component({
   selector: 'app-root',
   imports: [CommonModule],
@@ -45,6 +79,8 @@ type AppleRelease = {
 export class App implements OnInit, OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
+  private youtubePlayer: YouTubePlayer | null = null;
+  private pendingVideoId: string | null = null;
 
   protected readonly artistName = 'YNG ERRE';
   protected readonly channelUrl = 'https://www.youtube.com/channel/UC6kUWPUTwPd92a1xc9ubSfg';
@@ -75,12 +111,29 @@ export class App implements OnInit, OnDestroy {
     }
   ];
 
+  protected readonly filters: Array<'Tutti' | TrackType> = [
+    'Tutti',
+    'Progetto lungo',
+    'Mashup / fan edit',
+    'Singolo / brano'
+  ];
+
   protected readonly tracks = signal<Track[]>([]);
+  protected readonly playbackQueue = signal<Track[]>([]);
   protected readonly selectedYoutubeTrack = signal<Track | null>(null);
   protected readonly selectedAppleRelease = signal<AppleRelease>(this.appleReleases[0]);
+  protected readonly activeFilter = signal<'Tutti' | TrackType>('Tutti');
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
   protected readonly lastUpdatedLabel = signal('');
+  protected readonly isYoutubePlayerReady = signal(false);
+  protected readonly isYoutubePlaying = signal(false);
+
+  protected readonly filteredYoutubeTracks = computed(() => {
+    const filter = this.activeFilter();
+    const queue = this.playbackQueue();
+    return filter === 'Tutti' ? queue : queue.filter((track) => track.type === filter);
+  });
 
   protected readonly youtubeMashups = computed(() =>
     this.tracks().filter((track) => track.type === 'Mashup / fan edit')
@@ -92,28 +145,21 @@ export class App implements OnInit, OnDestroy {
 
     return [
       {
-        title: 'YouTube mashup',
-        meta: `${mashupCount} video`,
-        detail: 'La sezione YouTube mostra solo mashup e fan edit caricati sul canale.'
+        title: 'Universo YouTube',
+        meta: `${allTracks.length} video`,
+        detail: 'Qui convivono mashup, singoli e progetti lunghi in un unico percorso di ascolto e visione.'
       },
       {
         title: 'Release ufficiali',
-        meta: `${this.appleReleases.length} riferimenti Apple Music`,
-        detail: 'Le uscite ufficiali sono separate in una sezione dedicata con player Apple Music.'
+        meta: `${this.appleReleases.length} uscite`,
+        detail: 'Album, singoli e profilo artista trovano spazio in una sezione Apple Music separata.'
       },
       {
-        title: 'Catalogo video totale',
-        meta: `${allTracks.length} video pubblici`,
-        detail: 'Il catalogo YouTube viene caricato live e continua ad aggiornarsi automaticamente.'
+        title: 'Mashup e fan edit',
+        meta: `${mashupCount} video`,
+        detail: 'I mashup restano nel percorso YouTube, distinti dalle uscite ufficiali presenti su Apple Music.'
       }
     ];
-  });
-
-  protected readonly youtubePlayerUrl = computed<SafeResourceUrl | null>(() => {
-    const track = this.selectedYoutubeTrack();
-    return track
-      ? this.sanitizer.bypassSecurityTrustResourceUrl(this.buildYoutubeEmbedUrl(track.videoId))
-      : null;
   });
 
   protected readonly applePlayerUrl = computed<SafeResourceUrl>(() =>
@@ -122,6 +168,7 @@ export class App implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     void this.loadVideos();
+    void this.initializeYouTubeApi();
     this.refreshIntervalId = setInterval(() => {
       void this.loadVideos();
     }, 15 * 60 * 1000);
@@ -131,6 +178,11 @@ export class App implements OnInit, OnDestroy {
     if (this.refreshIntervalId) {
       clearInterval(this.refreshIntervalId);
     }
+
+    if (this.youtubePlayer) {
+      this.youtubePlayer.destroy();
+      this.youtubePlayer = null;
+    }
   }
 
   protected async refreshVideos(): Promise<void> {
@@ -139,10 +191,99 @@ export class App implements OnInit, OnDestroy {
 
   protected selectYoutubeTrack(track: Track): void {
     this.selectedYoutubeTrack.set(track);
+    this.loadAndPlayTrack(track);
+  }
+
+  protected setFilter(filter: 'Tutti' | TrackType): void {
+    this.activeFilter.set(filter);
+
+    const visibleTracks =
+      filter === 'Tutti'
+        ? this.playbackQueue()
+        : this.playbackQueue().filter((track) => track.type === filter);
+
+    const currentTrack = this.selectedYoutubeTrack();
+    if (!currentTrack || !visibleTracks.some((track) => track.videoId === currentTrack.videoId)) {
+      const nextTrack = visibleTracks[0] ?? null;
+      this.selectedYoutubeTrack.set(nextTrack);
+      if (nextTrack) {
+        this.loadAndPlayTrack(nextTrack);
+      }
+    }
   }
 
   protected selectAppleRelease(release: AppleRelease): void {
     this.selectedAppleRelease.set(release);
+  }
+
+  protected playPreviousTrack(): void {
+    const previousTrack = this.getRelativeQueueTrack(-1);
+    if (previousTrack) {
+      this.selectedYoutubeTrack.set(previousTrack);
+      this.loadAndPlayTrack(previousTrack);
+    }
+  }
+
+  protected playNextTrack(): void {
+    const nextTrack = this.getRelativeQueueTrack(1);
+    if (nextTrack) {
+      this.selectedYoutubeTrack.set(nextTrack);
+      this.loadAndPlayTrack(nextTrack);
+    } else {
+      this.isYoutubePlaying.set(false);
+    }
+  }
+
+  protected pauseYoutubePlayback(): void {
+    if (!this.youtubePlayer) {
+      return;
+    }
+
+    this.youtubePlayer.pauseVideo();
+    this.isYoutubePlaying.set(false);
+  }
+
+  protected resumeYoutubePlayback(): void {
+    const currentTrack = this.selectedYoutubeTrack();
+    if (!currentTrack) {
+      return;
+    }
+
+    if (!this.youtubePlayer) {
+      this.loadAndPlayTrack(currentTrack);
+      return;
+    }
+
+    this.youtubePlayer.playVideo();
+    this.isYoutubePlaying.set(true);
+  }
+
+  protected moveQueueItem(videoId: string, direction: -1 | 1): void {
+    const queue = [...this.playbackQueue()];
+    const currentIndex = queue.findIndex((track) => track.videoId === videoId);
+    const nextIndex = currentIndex + direction;
+
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= queue.length) {
+      return;
+    }
+
+    [queue[currentIndex], queue[nextIndex]] = [queue[nextIndex], queue[currentIndex]];
+    this.playbackQueue.set(queue);
+  }
+
+  protected canMoveQueueItem(videoId: string, direction: -1 | 1): boolean {
+    const queue = this.playbackQueue();
+    const currentIndex = queue.findIndex((track) => track.videoId === videoId);
+    const nextIndex = currentIndex + direction;
+    return currentIndex >= 0 && nextIndex >= 0 && nextIndex < queue.length;
+  }
+
+  protected hasPreviousTrack(): boolean {
+    return this.getRelativeQueueTrack(-1) !== null;
+  }
+
+  protected hasNextTrack(): boolean {
+    return this.getRelativeQueueTrack(1) !== null;
   }
 
   private async loadVideos(): Promise<void> {
@@ -162,13 +303,18 @@ export class App implements OnInit, OnDestroy {
 
       const payload = (await response.json()) as { fetchedAt?: string; items?: ApiTrack[] };
       const items = Array.isArray(payload.items) ? payload.items : [];
-      const mashups = items.filter((track) => track.type === 'Mashup / fan edit');
+      const mergedQueue = this.mergeQueueWithFreshTracks(this.playbackQueue(), items);
 
       this.tracks.set(items);
+      this.playbackQueue.set(mergedQueue);
 
       const currentTrack = this.selectedYoutubeTrack();
-      if (!currentTrack || !mashups.some((track) => track.videoId === currentTrack.videoId)) {
-        this.selectedYoutubeTrack.set(mashups[0] ?? null);
+      if (!currentTrack || !mergedQueue.some((track) => track.videoId === currentTrack.videoId)) {
+        const nextTrack = mergedQueue[0] ?? null;
+        this.selectedYoutubeTrack.set(nextTrack);
+        if (nextTrack) {
+          this.loadAndPlayTrack(nextTrack, false);
+        }
       }
 
       if (typeof payload.fetchedAt === 'string') {
@@ -176,12 +322,127 @@ export class App implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error(error);
-      this.errorMessage.set(
-        'Non sono riuscito a caricare il catalogo live da YouTube. In sviluppo locale usa `vercel dev` per testare anche la route API.'
-      );
+      this.errorMessage.set('In questo momento non riesco a caricare i contenuti YouTube. Riprova tra poco.');
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private async initializeYouTubeApi(): Promise<void> {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (window.YT?.Player) {
+      this.createYoutubePlayer();
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      const existingScript = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+      if (existingScript) {
+        window.onYouTubeIframeAPIReady = () => resolve();
+        return;
+      }
+
+      window.onYouTubeIframeAPIReady = () => resolve();
+      const script = document.createElement('script');
+      script.src = 'https://www.youtube.com/iframe_api';
+      script.async = true;
+      document.body.appendChild(script);
+    });
+
+    this.createYoutubePlayer();
+  }
+
+  private createYoutubePlayer(): void {
+    if (!window.YT?.Player || this.youtubePlayer) {
+      return;
+    }
+
+    const initialVideoId = this.selectedYoutubeTrack()?.videoId ?? '';
+    this.youtubePlayer = new window.YT.Player('youtube-player-host', {
+      videoId: initialVideoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 1,
+        modestbranding: 1,
+        rel: 0,
+        playsinline: 1
+      },
+      events: {
+        onReady: () => {
+          this.isYoutubePlayerReady.set(true);
+
+          const trackToLoad = this.selectedYoutubeTrack();
+          if (trackToLoad) {
+            this.loadAndPlayTrack(trackToLoad);
+          } else if (this.pendingVideoId) {
+            this.youtubePlayer?.loadVideoById(this.pendingVideoId);
+          }
+        },
+        onStateChange: (event) => {
+          const playerState = window.YT?.PlayerState;
+          if (!playerState) {
+            return;
+          }
+
+          if (event.data === playerState.PLAYING) {
+            this.isYoutubePlaying.set(true);
+          } else if (event.data === playerState.PAUSED || event.data === playerState.CUED) {
+            this.isYoutubePlaying.set(false);
+          } else if (event.data === playerState.ENDED) {
+            this.isYoutubePlaying.set(false);
+            this.playNextTrack();
+          }
+        }
+      }
+    });
+  }
+
+  private loadAndPlayTrack(track: Track, autoplay = true): void {
+    this.pendingVideoId = track.videoId;
+
+    if (!this.youtubePlayer || !this.isYoutubePlayerReady()) {
+      return;
+    }
+
+    if (autoplay) {
+      this.youtubePlayer.loadVideoById(track.videoId);
+      this.isYoutubePlaying.set(true);
+      return;
+    }
+
+    this.youtubePlayer.cueVideoById(track.videoId);
+    this.isYoutubePlaying.set(false);
+  }
+
+  private getRelativeQueueTrack(offset: -1 | 1): Track | null {
+    const currentTrack = this.selectedYoutubeTrack();
+    if (!currentTrack) {
+      return null;
+    }
+
+    const queue = this.playbackQueue();
+    const currentIndex = queue.findIndex((track) => track.videoId === currentTrack.videoId);
+    const nextIndex = currentIndex + offset;
+
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= queue.length) {
+      return null;
+    }
+
+    return queue[nextIndex];
+  }
+
+  private mergeQueueWithFreshTracks(existingQueue: Track[], freshTracks: Track[]): Track[] {
+    const freshById = new Map(freshTracks.map((track) => [track.videoId, track] as const));
+    const preservedOrder = existingQueue
+      .map((track) => freshById.get(track.videoId))
+      .filter((track): track is Track => Boolean(track));
+    const preservedIds = new Set(preservedOrder.map((track) => track.videoId));
+    const appendedTracks = freshTracks.filter((track) => !preservedIds.has(track.videoId));
+
+    return [...preservedOrder, ...appendedTracks];
   }
 
   private formatFetchedAt(value: string): string {
@@ -194,9 +455,5 @@ export class App implements OnInit, OnDestroy {
       dateStyle: 'medium',
       timeStyle: 'short'
     }).format(date)}`;
-  }
-
-  private buildYoutubeEmbedUrl(videoId: string): string {
-    return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&controls=1&modestbranding=1&rel=0`;
   }
 }
