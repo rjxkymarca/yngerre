@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Manrope:wght@400;500;700;800&display=swap');
+
+:root {
+  --font-sans: 'Manrope', sans-serif;
+  --font-display: 'Fraunces', serif;
+  --text-primary: #f8f2f4;
+  --text-secondary: rgba(248, 242, 244, 0.72);
+  --text-muted: rgba(248, 242, 244, 0.52);
+  --accent-soft: #ff9ab6;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: #0d0d11;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
