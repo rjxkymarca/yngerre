@@ -769,13 +769,14 @@
   }
 
   .player-controls {
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.65rem;
   }
 
   .control-button {
-    flex: 1 1 calc(20% - 0.55rem);
-    min-width: 3.25rem;
+    width: 100%;
+    min-width: 0;
     min-height: 3.25rem;
   }
 

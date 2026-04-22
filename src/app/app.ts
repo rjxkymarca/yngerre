@@ -470,7 +470,7 @@ export class App implements OnInit, OnDestroy {
     }
 
     const width = Math.max(Math.round(frame.clientWidth), 200);
-    const height = Math.max(Math.round((width / 16) * 9), 270);
+    const height = Math.max(Math.round(frame.clientHeight), 200);
     this.youtubePlayer.setSize(width, height);
   }
 
