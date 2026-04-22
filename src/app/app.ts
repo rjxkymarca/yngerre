@@ -69,6 +69,7 @@ type YouTubePlayer = {
   loadVideoById: (videoId: string) => void;
   pauseVideo: () => void;
   playVideo: () => void;
+  setSize: (width: number, height: number) => void;
   destroy: () => void;
 };
 
@@ -83,6 +84,9 @@ export class App implements OnInit, OnDestroy {
   private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
   private youtubePlayer: YouTubePlayer | null = null;
   private pendingVideoId: string | null = null;
+  private readonly handleWindowResize = () => {
+    this.syncYoutubePlayerSize();
+  };
 
   protected readonly artistName = 'YNG ERRE';
   protected readonly channelUrl = 'https://www.youtube.com/channel/UC6kUWPUTwPd92a1xc9ubSfg';
@@ -130,6 +134,7 @@ export class App implements OnInit, OnDestroy {
   protected readonly lastUpdatedLabel = signal('');
   protected readonly isYoutubePlayerReady = signal(false);
   protected readonly isYoutubePlaying = signal(false);
+  protected readonly audioOnlyMode = signal(false);
 
   protected readonly filteredYoutubeTracks = computed(() => {
     const filter = this.activeFilter();
@@ -171,6 +176,7 @@ export class App implements OnInit, OnDestroy {
   ngOnInit(): void {
     void this.loadVideos();
     void this.initializeYouTubeApi();
+    window.addEventListener('resize', this.handleWindowResize);
     this.refreshIntervalId = setInterval(() => {
       void this.loadVideos();
     }, 15 * 60 * 1000);
@@ -185,6 +191,8 @@ export class App implements OnInit, OnDestroy {
       this.youtubePlayer.destroy();
       this.youtubePlayer = null;
     }
+
+    window.removeEventListener('resize', this.handleWindowResize);
   }
 
   protected async refreshVideos(): Promise<void> {
@@ -258,6 +266,11 @@ export class App implements OnInit, OnDestroy {
 
     this.youtubePlayer.playVideo();
     this.isYoutubePlaying.set(true);
+  }
+
+  protected toggleAudioOnlyMode(): void {
+    this.audioOnlyMode.update((value) => !value);
+    setTimeout(() => this.syncYoutubePlayerSize(), 0);
   }
 
   protected moveQueueItem(videoId: string, direction: -1 | 1): void {
@@ -377,6 +390,7 @@ export class App implements OnInit, OnDestroy {
       events: {
         onReady: () => {
           this.isYoutubePlayerReady.set(true);
+          this.syncYoutubePlayerSize();
 
           const trackToLoad = this.selectedYoutubeTrack();
           if (trackToLoad) {
@@ -419,6 +433,21 @@ export class App implements OnInit, OnDestroy {
 
     this.youtubePlayer.cueVideoById(track.videoId);
     this.isYoutubePlaying.set(false);
+  }
+
+  private syncYoutubePlayerSize(): void {
+    if (!this.youtubePlayer) {
+      return;
+    }
+
+    const frame = document.querySelector('.video-frame') as HTMLElement | null;
+    if (!frame) {
+      return;
+    }
+
+    const width = Math.max(Math.round(frame.clientWidth), 200);
+    const height = this.audioOnlyMode() ? 200 : Math.max(Math.round((width / 16) * 9), 270);
+    this.youtubePlayer.setSize(width, height);
   }
 
   private getRelativeQueueTrack(offset: -1 | 1): Track | null {

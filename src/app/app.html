@@ -90,7 +90,7 @@
               <p>Pubblicato {{ currentTrack.publishedLabel }} · durata {{ currentTrack.duration }}</p>
             </div>
 
-            <div class="video-frame">
+            <div class="video-frame" [class.is-audio-focus]="audioOnlyMode()">
               <div id="youtube-player-host" class="youtube-player-host" aria-label="YouTube player for selected YNG ERRE video"></div>
             </div>
 
@@ -105,7 +105,7 @@
               >
                 <span class="control-button__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false">
-                    <path d="M11 18V6l-8.5 6L11 18Zm1 0 8.5-6L12 6v12Z" />
+                    <path d="M6 6h2v12H6zm3 6 9 6V6z" />
                   </svg>
                 </span>
               </button>
@@ -147,7 +147,21 @@
               >
                 <span class="control-button__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false">
-                    <path d="m13 18 8.5-6L13 6v12ZM4.5 18 13 12 4.5 6v12Z" />
+                    <path d="M16 6h2v12h-2zM7 6v12l9-6z" />
+                  </svg>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="control-button"
+                [class.is-active]="audioOnlyMode()"
+                (click)="toggleAudioOnlyMode()"
+                aria-label="Modalità ascolto"
+                title="Modalità ascolto"
+              >
+                <span class="control-button__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 3a7 7 0 0 0-7 7v5a3 3 0 0 0 3 3h1v-8H7v5a1 1 0 0 1-1-1v-5a6 6 0 1 1 12 0v5a1 1 0 0 1-1 1h-2v-5h-2v8h4a3 3 0 0 0 3-3v-5a7 7 0 0 0-7-7Z" />
                   </svg>
                 </span>
               </button>
