@@ -18,31 +18,32 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">YouTube-first experience</p>
+        <p class="eyebrow">Dual player experience</p>
         <h2>
-          Una home che mostra <span>tutto il catalogo video</span> di YNG ERRE, dai mashup ai brani singoli.
+          Due sezioni separate: <span>mashup su YouTube</span> e <span>release ufficiali su Apple Music</span>.
         </h2>
         <p class="lede">
-          Il catalogo viene caricato automaticamente dal canale YouTube a ogni apertura della pagina, quindi i nuovi
-          caricamenti entrano in libreria senza aggiornare il codice.
+          I mashup e i fan edit restano nel player YouTube con catalogo live del canale. Le uscite ufficiali hanno una
+          sezione distinta con player Apple Music dedicato.
         </p>
 
         <div class="hero-actions">
-          <a class="primary-action" href="#player">Apri il player</a>
+          <a class="primary-action" href="#youtube-player">Apri YouTube</a>
+          <a class="secondary-action" href="#apple-player">Apri Apple Music</a>
           <button class="secondary-action button-reset" type="button" (click)="refreshVideos()">Aggiorna catalogo</button>
         </div>
 
         <dl class="hero-metrics">
           <div>
-            <dt>Video visibili</dt>
-            <dd>{{ tracks().length }}</dd>
+            <dt>Mashup YouTube</dt>
+            <dd>{{ youtubeMashups().length }}</dd>
           </div>
           <div>
-            <dt>Fonte catalogo</dt>
-            <dd>YouTube channel live</dd>
+            <dt>Release Apple</dt>
+            <dd>{{ appleReleases.length }}</dd>
           </div>
           <div>
-            <dt>Stato</dt>
+            <dt>Stato sync</dt>
             <dd>{{ isLoading() ? 'Sincronizzazione...' : 'Sincronizzato' }}</dd>
           </div>
         </dl>
@@ -62,37 +63,37 @@
           <div class="cover-disc"></div>
           <div class="cover-meta">
             <p>Now framing</p>
-            @if (selectedTrack(); as currentTrack) {
+            @if (selectedYoutubeTrack(); as currentTrack) {
               <strong>{{ currentTrack.title }}</strong>
-              <span>{{ currentTrack.type }}</span>
+              <span>Mashup / fan edit</span>
             } @else {
-              <strong>Catalogo in caricamento</strong>
-              <span>Attendo i video del canale</span>
+              <strong>{{ selectedAppleRelease().title }}</strong>
+              <span>Release ufficiale</span>
             }
           </div>
         </div>
       </div>
     </section>
 
-    <section class="player-section" id="player">
+    <section class="player-section" id="youtube-player">
       <div class="section-heading">
-        <p class="eyebrow">Now playing</p>
-        <h3>Player principale</h3>
+        <p class="eyebrow">YouTube</p>
+        <h3>Mashup e fan edit</h3>
       </div>
 
       <div class="player-grid">
         <article class="video-panel">
-          @if (selectedTrack(); as currentTrack) {
+          @if (selectedYoutubeTrack(); as currentTrack) {
             <div class="video-panel__meta">
-              <p class="eyebrow">{{ currentTrack.type }}</p>
+              <p class="eyebrow">Mashup / fan edit</p>
               <h4>{{ currentTrack.title }}</h4>
               <p>Pubblicato {{ currentTrack.publishedLabel }} · durata {{ currentTrack.duration }}</p>
             </div>
 
             <div class="video-frame">
               <iframe
-                [src]="playerUrl()"
-                title="YouTube player for selected YNG ERRE track"
+                [src]="youtubePlayerUrl()"
+                title="YouTube player for selected YNG ERRE mashup"
                 loading="lazy"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerpolicy="strict-origin-when-cross-origin"
@@ -108,44 +109,31 @@
             </div>
           } @else {
             <div class="video-panel__placeholder">
-              <p class="eyebrow">Catalogo live</p>
-              <h4>Nessun video selezionato</h4>
-              <p>Appena il catalogo viene caricato, il player mostra automaticamente il primo video disponibile.</p>
+              <p class="eyebrow">Catalogo mashup</p>
+              <h4>Nessun mashup disponibile</h4>
+              <p>Quando il catalogo live trova mashup o fan edit, il primo viene caricato automaticamente nel player.</p>
             </div>
           }
         </article>
 
         <aside class="queue-panel">
           <div class="queue-panel__heading">
-            <p class="eyebrow">Libreria</p>
-            <h4>Tutti i video</h4>
-          </div>
-
-          <div class="filter-row" aria-label="Filtri catalogo">
-            @for (filter of filters; track filter) {
-              <button
-                type="button"
-                class="filter-pill"
-                [class.is-active]="activeFilter() === filter"
-                (click)="setFilter(filter)"
-              >
-                {{ filter }}
-              </button>
-            }
+            <p class="eyebrow">YouTube queue</p>
+            <h4>Solo mashup</h4>
           </div>
 
           <div class="track-list">
-            @for (track of filteredTracks(); track track.videoId) {
+            @for (track of youtubeMashups(); track track.videoId) {
               <button
                 type="button"
                 class="track-item"
-                [class.is-active]="selectedTrack()?.videoId === track.videoId"
-                (click)="selectTrack(track)"
+                [class.is-active]="selectedYoutubeTrack()?.videoId === track.videoId"
+                (click)="selectYoutubeTrack(track)"
               >
                 <span class="track-item__index">{{ $index + 1 | number: '2.0' }}</span>
                 <span class="track-item__body">
                   <strong>{{ track.title }}</strong>
-                  <small>{{ track.type }} · {{ track.publishedLabel }}</small>
+                  <small>{{ track.publishedLabel }}</small>
                 </span>
                 <span class="track-item__duration">{{ track.duration }}</span>
               </button>
@@ -153,8 +141,66 @@
           </div>
 
           <p class="queue-note">
-            La libreria viene caricata dalla route serverless `/api/youtube-videos`, che percorre tutte le pagine del
-            canale. Quando viene pubblicato un nuovo video, entra automaticamente nella lista al successivo caricamento.
+            Questa sezione è separata dalle release ufficiali: qui compaiono solo mashup e fan edit estratti dal canale
+            YouTube live.
+          </p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="player-section" id="apple-player">
+      <div class="section-heading">
+        <p class="eyebrow">Apple Music</p>
+        <h3>Release ufficiali</h3>
+      </div>
+
+      <div class="player-grid player-grid--apple">
+        <article class="video-panel">
+          <div class="video-panel__meta">
+            <p class="eyebrow">Official catalog</p>
+            <h4>{{ selectedAppleRelease().title }}</h4>
+            <p>{{ selectedAppleRelease().meta }}</p>
+          </div>
+
+          <div class="music-frame">
+            <iframe
+              [src]="applePlayerUrl()"
+              title="Apple Music player for selected YNG ERRE release"
+              loading="lazy"
+              allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
+              sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-top-navigation-by-user-activation"
+            ></iframe>
+          </div>
+
+          <div class="video-panel__footer">
+            <span>{{ selectedAppleRelease().detail }}</span>
+            <a [href]="selectedAppleRelease().appleMusicUrl" target="_blank" rel="noreferrer">Apri su Apple Music</a>
+          </div>
+        </article>
+
+        <aside class="queue-panel">
+          <div class="queue-panel__heading">
+            <p class="eyebrow">Apple Music queue</p>
+            <h4>Album e singoli</h4>
+          </div>
+
+          <div class="release-list">
+            @for (release of appleReleases; track release.title) {
+              <button
+                type="button"
+                class="release-item"
+                [class.is-active]="selectedAppleRelease().title === release.title"
+                (click)="selectAppleRelease(release)"
+              >
+                <strong>{{ release.title }}</strong>
+                <small>{{ release.meta }}</small>
+              </button>
+            }
+          </div>
+
+          <p class="queue-note">
+            Qui restano solo le uscite ufficiali collegate ad Apple Music, separate dai mashup YouTube per evitare
+            commistioni tra contenuti ufficiali e fan edit.
           </p>
         </aside>
       </div>
@@ -180,19 +226,19 @@
     <section class="story-section">
       <div class="story-panel">
         <p class="eyebrow">Creative direction</p>
-        <h3>Minimal chrome, luce liquida, focus totale sui video.</h3>
+        <h3>Catalogo diviso per natura del contenuto.</h3>
         <p>
-          Il sito mantiene il taglio editoriale, ma la struttura è stata riallineata a una vera videoteca: contenuti
-          completi, filtri immediati e player coerente con il catalogo reale del canale.
+          I mashup e i fan edit sono trattati come universo YouTube, mentre il catalogo ufficiale vive in una sezione
+          Apple Music autonoma con player dedicato e selezione separata.
         </p>
       </div>
 
       <div class="story-panel story-panel--accent">
         <p class="eyebrow">Deployment ready</p>
-        <h3>Pronto per Vercel con catalogo live.</h3>
+        <h3>Pronto per Vercel con doppio player.</h3>
         <p>
-          In produzione la route API gira su Vercel e aggiorna il catalogo direttamente dal canale YouTube. In locale,
-          per testare anche la route serverless, usa `vercel dev` invece del solo `ng serve`.
+          In produzione la route API aggiorna i mashup YouTube dal canale live. Apple Music usa embed ufficiali fissi
+          per album, singoli e profilo artista.
         </p>
       </div>
     </section>

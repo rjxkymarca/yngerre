@@ -13,12 +13,6 @@ type Track = {
   viewCountText: string;
 };
 
-type Collection = {
-  title: string;
-  meta: string;
-  detail: string;
-};
-
 type ApiTrack = {
   title: string;
   type: TrackType;
@@ -26,6 +20,20 @@ type ApiTrack = {
   publishedLabel: string;
   videoId: string;
   viewCountText: string;
+};
+
+type Collection = {
+  title: string;
+  meta: string;
+  detail: string;
+};
+
+type AppleRelease = {
+  title: string;
+  meta: string;
+  detail: string;
+  appleMusicUrl: string;
+  embedUrl: string;
 };
 
 @Component({
@@ -42,57 +50,75 @@ export class App implements OnInit, OnDestroy {
   protected readonly channelUrl = 'https://www.youtube.com/channel/UC6kUWPUTwPd92a1xc9ubSfg';
   protected readonly appleMusicArtistUrl = 'https://music.apple.com/it/artist/yng-erre/1615633683';
   protected readonly linkBioUrl = 'https://lnk.bio/yngerre';
-  protected readonly filters: Array<'Tutti' | TrackType> = [
-    'Tutti',
-    'Progetto lungo',
-    'Mashup / fan edit',
-    'Singolo / brano'
+
+  protected readonly appleReleases: AppleRelease[] = [
+    {
+      title: 'INTROVERT. (Deluxe)',
+      meta: 'Album · 12 brani · 2023',
+      detail: 'Release ufficiale principale disponibile su Apple Music.',
+      appleMusicUrl: 'https://music.apple.com/it/album/introvert-deluxe/1681465591',
+      embedUrl: 'https://embed.music.apple.com/it/album/introvert-deluxe/1681465591'
+    },
+    {
+      title: 'Stand By Me. - Single',
+      meta: 'Singolo · 1 brano · 2023',
+      detail: 'Singolo ufficiale presente nella sezione Singoli e EP di Apple Music.',
+      appleMusicUrl: 'https://music.apple.com/it/album/stand-by-me-single/1700777962',
+      embedUrl: 'https://embed.music.apple.com/it/album/stand-by-me-single/1700777962'
+    },
+    {
+      title: 'Profilo artista Apple Music',
+      meta: 'Top brani, album, singoli e EP',
+      detail: 'Vista completa del catalogo ufficiale Yng Erre su Apple Music.',
+      appleMusicUrl: 'https://music.apple.com/it/artist/yng-erre/1615633683',
+      embedUrl: 'https://music.apple.com/it/artist/embed/1615633683'
+    }
   ];
 
   protected readonly tracks = signal<Track[]>([]);
-  protected readonly selectedTrack = signal<Track | null>(null);
-  protected readonly activeFilter = signal<'Tutti' | TrackType>('Tutti');
+  protected readonly selectedYoutubeTrack = signal<Track | null>(null);
+  protected readonly selectedAppleRelease = signal<AppleRelease>(this.appleReleases[0]);
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
   protected readonly lastUpdatedLabel = signal('');
 
-  protected readonly filteredTracks = computed(() => {
-    const filter = this.activeFilter();
-    const allTracks = this.tracks();
-    return filter === 'Tutti' ? allTracks : allTracks.filter((track) => track.type === filter);
-  });
+  protected readonly youtubeMashups = computed(() =>
+    this.tracks().filter((track) => track.type === 'Mashup / fan edit')
+  );
 
   protected readonly collections = computed<Collection[]>(() => {
     const allTracks = this.tracks();
-    const mashupCount = this.countTracksByType('Mashup / fan edit');
-    const longformCount = this.countTracksByType('Progetto lungo');
-    const singleCount = this.countTracksByType('Singolo / brano');
+    const mashupCount = this.youtubeMashups().length;
 
     return [
       {
-        title: 'Catalogo completo',
+        title: 'YouTube mashup',
+        meta: `${mashupCount} video`,
+        detail: 'La sezione YouTube mostra solo mashup e fan edit caricati sul canale.'
+      },
+      {
+        title: 'Release ufficiali',
+        meta: `${this.appleReleases.length} riferimenti Apple Music`,
+        detail: 'Le uscite ufficiali sono separate in una sezione dedicata con player Apple Music.'
+      },
+      {
+        title: 'Catalogo video totale',
         meta: `${allTracks.length} video pubblici`,
-        detail: 'La libreria viene caricata a runtime dal canale YouTube e si aggiorna automaticamente.'
-      },
-      {
-        title: 'Mashup e fan edit',
-        meta: `${mashupCount} elementi`,
-        detail: 'Filtro dedicato per brani compositi, crossover e rework pubblicati sul canale.'
-      },
-      {
-        title: 'Singoli e progetti',
-        meta: `${singleCount + longformCount} elementi`,
-        detail: 'Sono inclusi sia i brani standalone sia i formati lunghi come EP, visual EP e fan-made album.'
+        detail: 'Il catalogo YouTube viene caricato live e continua ad aggiornarsi automaticamente.'
       }
     ];
   });
 
-  protected readonly playerUrl = computed<SafeResourceUrl | null>(() => {
-    const track = this.selectedTrack();
+  protected readonly youtubePlayerUrl = computed<SafeResourceUrl | null>(() => {
+    const track = this.selectedYoutubeTrack();
     return track
       ? this.sanitizer.bypassSecurityTrustResourceUrl(this.buildYoutubeEmbedUrl(track.videoId))
       : null;
   });
+
+  protected readonly applePlayerUrl = computed<SafeResourceUrl>(() =>
+    this.sanitizer.bypassSecurityTrustResourceUrl(this.selectedAppleRelease().embedUrl)
+  );
 
   ngOnInit(): void {
     void this.loadVideos();
@@ -111,18 +137,12 @@ export class App implements OnInit, OnDestroy {
     await this.loadVideos();
   }
 
-  protected selectTrack(track: Track): void {
-    this.selectedTrack.set(track);
+  protected selectYoutubeTrack(track: Track): void {
+    this.selectedYoutubeTrack.set(track);
   }
 
-  protected setFilter(filter: 'Tutti' | TrackType): void {
-    this.activeFilter.set(filter);
-
-    const visibleTracks = filter === 'Tutti' ? this.tracks() : this.tracks().filter((track) => track.type === filter);
-    const currentTrack = this.selectedTrack();
-    if (!currentTrack || !visibleTracks.some((track) => track.videoId === currentTrack.videoId)) {
-      this.selectedTrack.set(visibleTracks[0] ?? null);
-    }
+  protected selectAppleRelease(release: AppleRelease): void {
+    this.selectedAppleRelease.set(release);
   }
 
   private async loadVideos(): Promise<void> {
@@ -142,12 +162,13 @@ export class App implements OnInit, OnDestroy {
 
       const payload = (await response.json()) as { fetchedAt?: string; items?: ApiTrack[] };
       const items = Array.isArray(payload.items) ? payload.items : [];
+      const mashups = items.filter((track) => track.type === 'Mashup / fan edit');
 
       this.tracks.set(items);
 
-      const currentTrack = this.selectedTrack();
-      if (!currentTrack || !items.some((track) => track.videoId === currentTrack.videoId)) {
-        this.selectedTrack.set(items[0] ?? null);
+      const currentTrack = this.selectedYoutubeTrack();
+      if (!currentTrack || !mashups.some((track) => track.videoId === currentTrack.videoId)) {
+        this.selectedYoutubeTrack.set(mashups[0] ?? null);
       }
 
       if (typeof payload.fetchedAt === 'string') {
@@ -161,10 +182,6 @@ export class App implements OnInit, OnDestroy {
     } finally {
       this.isLoading.set(false);
     }
-  }
-
-  private countTracksByType(type: TrackType): number {
-    return this.tracks().filter((track) => track.type === type).length;
   }
 
   private formatFetchedAt(value: string): string {
