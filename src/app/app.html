@@ -201,11 +201,19 @@
             }
           </div>
 
-          <div class="track-list">
+          <div class="track-list" #queueList (dragover)="handleQueueListDragOver($event)">
             @for (track of filteredYoutubeTracks(); track track.videoId) {
               <div
                 class="track-item"
                 [class.is-active]="selectedYoutubeTrack()?.videoId === track.videoId"
+                [class.is-dragging]="draggedTrackId() === track.videoId"
+                [class.is-drop-before]="dragTargetTrackId() === track.videoId && dragTargetPosition() === 'before'"
+                [class.is-drop-after]="dragTargetTrackId() === track.videoId && dragTargetPosition() === 'after'"
+                draggable="true"
+                (dragstart)="handleQueueDragStart($event, track.videoId)"
+                (dragover)="handleQueueDragOver($event, track.videoId)"
+                (drop)="handleQueueDrop($event, track.videoId)"
+                (dragend)="handleQueueDragEnd()"
               >
                 <button type="button" class="track-item__main" (click)="selectYoutubeTrack(track)">
                   <span class="track-item__index">{{ $index + 1 | number: '2.0' }}</span>
@@ -240,7 +248,7 @@
           </div>
 
           <p class="queue-note">
-            La riproduzione continua automaticamente da un video al successivo seguendo l’ordine attuale della coda.
+            Trascina le tracce per riordinarle. La riproduzione continua automaticamente seguendo l’ordine attuale della coda.
           </p>
         </aside>
       </div>

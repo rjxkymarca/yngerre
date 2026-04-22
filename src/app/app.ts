@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 type TrackType = 'Progetto lungo' | 'Mashup / fan edit' | 'Singolo / brano';
@@ -85,9 +85,13 @@ export class App implements OnInit, OnDestroy {
   private youtubePlayer: YouTubePlayer | null = null;
   private pendingVideoId: string | null = null;
   private frameResizeObserver: ResizeObserver | null = null;
+  private queueAutoScrollFrame: number | null = null;
+  private queueAutoScrollStep = 0;
   private readonly handleWindowResize = () => {
     this.syncYoutubePlayerSize();
   };
+  @ViewChild('queueList')
+  private queueListRef?: ElementRef<HTMLDivElement>;
 
   protected readonly artistName = 'YNG ERRE';
   protected readonly channelUrl = 'https://www.youtube.com/channel/UC6kUWPUTwPd92a1xc9ubSfg';
@@ -135,6 +139,9 @@ export class App implements OnInit, OnDestroy {
   protected readonly lastUpdatedLabel = signal('');
   protected readonly isYoutubePlayerReady = signal(false);
   protected readonly isYoutubePlaying = signal(false);
+  protected readonly draggedTrackId = signal<string | null>(null);
+  protected readonly dragTargetTrackId = signal<string | null>(null);
+  protected readonly dragTargetPosition = signal<'before' | 'after' | null>(null);
 
   protected readonly filteredYoutubeTracks = computed(() => {
     const filter = this.activeFilter();
@@ -197,6 +204,7 @@ export class App implements OnInit, OnDestroy {
       this.frameResizeObserver = null;
     }
 
+    this.stopQueueAutoScroll();
     window.removeEventListener('resize', this.handleWindowResize);
   }
 
@@ -291,6 +299,62 @@ export class App implements OnInit, OnDestroy {
     const currentIndex = queue.findIndex((track) => track.videoId === videoId);
     const nextIndex = currentIndex + direction;
     return currentIndex >= 0 && nextIndex >= 0 && nextIndex < queue.length;
+  }
+
+  protected handleQueueDragStart(event: DragEvent, videoId: string): void {
+    this.draggedTrackId.set(videoId);
+    this.dragTargetTrackId.set(null);
+    this.dragTargetPosition.set(null);
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', videoId);
+    }
+  }
+
+  protected handleQueueDragOver(event: DragEvent, targetVideoId: string): void {
+    const draggedVideoId = this.draggedTrackId();
+    if (!draggedVideoId) {
+      return;
+    }
+
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+
+    const target = event.currentTarget as HTMLElement | null;
+    const position = this.getDragPosition(event, target);
+
+    this.dragTargetTrackId.set(targetVideoId);
+    this.dragTargetPosition.set(draggedVideoId === targetVideoId ? null : position);
+    this.updateQueueAutoScroll(event.clientY);
+  }
+
+  protected handleQueueDrop(event: DragEvent, targetVideoId: string): void {
+    const draggedVideoId = this.draggedTrackId();
+    if (!draggedVideoId) {
+      return;
+    }
+
+    event.preventDefault();
+    const target = event.currentTarget as HTMLElement | null;
+    const position = this.getDragPosition(event, target);
+    this.reorderQueueItem(draggedVideoId, targetVideoId, position);
+    this.resetDragState();
+  }
+
+  protected handleQueueDragEnd(): void {
+    this.resetDragState();
+  }
+
+  protected handleQueueListDragOver(event: DragEvent): void {
+    if (!this.draggedTrackId()) {
+      return;
+    }
+
+    event.preventDefault();
+    this.updateQueueAutoScroll(event.clientY);
   }
 
   protected hasQueueToShuffle(): boolean {
@@ -539,5 +603,95 @@ export class App implements OnInit, OnDestroy {
       dateStyle: 'medium',
       timeStyle: 'short'
     }).format(date)}`;
+  }
+
+  private reorderQueueItem(
+    draggedVideoId: string,
+    targetVideoId: string,
+    position: 'before' | 'after'
+  ): void {
+    if (draggedVideoId === targetVideoId) {
+      return;
+    }
+
+    const queue = [...this.playbackQueue()];
+    const draggedIndex = queue.findIndex((track) => track.videoId === draggedVideoId);
+    const targetIndex = queue.findIndex((track) => track.videoId === targetVideoId);
+
+    if (draggedIndex < 0 || targetIndex < 0) {
+      return;
+    }
+
+    const [draggedTrack] = queue.splice(draggedIndex, 1);
+    const nextTargetIndex = queue.findIndex((track) => track.videoId === targetVideoId);
+    const insertIndex = position === 'before' ? nextTargetIndex : nextTargetIndex + 1;
+
+    queue.splice(insertIndex, 0, draggedTrack);
+    this.playbackQueue.set(queue);
+  }
+
+  private getDragPosition(event: DragEvent, element: HTMLElement | null): 'before' | 'after' {
+    if (!element) {
+      return 'after';
+    }
+
+    const bounds = element.getBoundingClientRect();
+    const midpoint = bounds.top + bounds.height / 2;
+    return event.clientY < midpoint ? 'before' : 'after';
+  }
+
+  private updateQueueAutoScroll(pointerY: number): void {
+    const queueList = this.queueListRef?.nativeElement;
+    if (!queueList) {
+      return;
+    }
+
+    const bounds = queueList.getBoundingClientRect();
+    const edgeThreshold = 72;
+    let nextStep = 0;
+
+    if (pointerY < bounds.top + edgeThreshold) {
+      nextStep = -Math.min(20, Math.ceil((bounds.top + edgeThreshold - pointerY) / 6));
+    } else if (pointerY > bounds.bottom - edgeThreshold) {
+      nextStep = Math.min(20, Math.ceil((pointerY - (bounds.bottom - edgeThreshold)) / 6));
+    }
+
+    this.queueAutoScrollStep = nextStep;
+
+    if (nextStep === 0) {
+      this.stopQueueAutoScroll();
+      return;
+    }
+
+    if (this.queueAutoScrollFrame === null) {
+      this.queueAutoScrollFrame = requestAnimationFrame(() => this.runQueueAutoScroll());
+    }
+  }
+
+  private runQueueAutoScroll(): void {
+    const queueList = this.queueListRef?.nativeElement;
+    if (!queueList || this.queueAutoScrollStep === 0) {
+      this.stopQueueAutoScroll();
+      return;
+    }
+
+    queueList.scrollTop += this.queueAutoScrollStep;
+    this.queueAutoScrollFrame = requestAnimationFrame(() => this.runQueueAutoScroll());
+  }
+
+  private stopQueueAutoScroll(): void {
+    this.queueAutoScrollStep = 0;
+
+    if (this.queueAutoScrollFrame !== null) {
+      cancelAnimationFrame(this.queueAutoScrollFrame);
+      this.queueAutoScrollFrame = null;
+    }
+  }
+
+  private resetDragState(): void {
+    this.draggedTrackId.set(null);
+    this.dragTargetTrackId.set(null);
+    this.dragTargetPosition.set(null);
+    this.stopQueueAutoScroll();
   }
 }
