@@ -711,22 +711,80 @@
     border-radius: 1.5rem;
   }
 
+  .video-frame {
+    border-radius: 1.25rem;
+  }
+
+  .player-controls {
+    justify-content: space-between;
+    gap: 0.65rem;
+  }
+
+  .control-button {
+    flex: 1 1 calc(20% - 0.55rem);
+    min-width: 3.25rem;
+    min-height: 3.25rem;
+  }
+
+  .queue-panel {
+    padding: 1rem;
+  }
+
+  .filter-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    margin-inline: -0.1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-pill {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    padding-inline: 1.1rem;
+  }
+
+  .track-list {
+    max-height: none;
+    padding-right: 0;
+  }
+
   .track-item {
     grid-template-columns: 1fr;
+    gap: 0.6rem;
   }
 
   .track-item__main {
     grid-template-columns: auto 1fr;
+    gap: 0.85rem;
+    padding: 1rem 0.95rem;
+    border-radius: 1.15rem;
   }
 
   .track-item__duration {
     grid-column: 2;
     justify-self: start;
+    font-size: 0.9rem;
   }
 
   .track-item__actions {
-    grid-auto-flow: column;
-    justify-content: end;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .queue-action {
+    width: 100%;
+    height: 2.9rem;
+    border-radius: 1rem;
+  }
+
+  .queue-note {
+    font-size: 0.9rem;
   }
 
   .music-frame {

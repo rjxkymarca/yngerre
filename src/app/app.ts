@@ -84,6 +84,7 @@ export class App implements OnInit, OnDestroy {
   private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
   private youtubePlayer: YouTubePlayer | null = null;
   private pendingVideoId: string | null = null;
+  private frameResizeObserver: ResizeObserver | null = null;
   private readonly handleWindowResize = () => {
     this.syncYoutubePlayerSize();
   };
@@ -191,6 +192,11 @@ export class App implements OnInit, OnDestroy {
       this.youtubePlayer = null;
     }
 
+    if (this.frameResizeObserver) {
+      this.frameResizeObserver.disconnect();
+      this.frameResizeObserver = null;
+    }
+
     window.removeEventListener('resize', this.handleWindowResize);
   }
 
@@ -285,6 +291,29 @@ export class App implements OnInit, OnDestroy {
     const currentIndex = queue.findIndex((track) => track.videoId === videoId);
     const nextIndex = currentIndex + direction;
     return currentIndex >= 0 && nextIndex >= 0 && nextIndex < queue.length;
+  }
+
+  protected hasQueueToShuffle(): boolean {
+    return this.playbackQueue().length > 1;
+  }
+
+  protected shuffleQueue(): void {
+    const queue = this.playbackQueue();
+    if (queue.length < 2) {
+      return;
+    }
+
+    const currentTrack = this.selectedYoutubeTrack();
+    if (!currentTrack) {
+      const shuffledQueue = this.shuffleTracks(queue);
+      this.playbackQueue.set(shuffledQueue);
+      this.selectedYoutubeTrack.set(shuffledQueue[0] ?? null);
+      return;
+    }
+
+    const remainingTracks = queue.filter((track) => track.videoId !== currentTrack.videoId);
+    const shuffledQueue = [currentTrack, ...this.shuffleTracks(remainingTracks)];
+    this.playbackQueue.set(shuffledQueue);
   }
 
   protected hasPreviousTrack(): boolean {
@@ -384,6 +413,7 @@ export class App implements OnInit, OnDestroy {
       events: {
         onReady: () => {
           this.isYoutubePlayerReady.set(true);
+          this.observeVideoFrame();
           this.syncYoutubePlayerSize();
 
           const trackToLoad = this.selectedYoutubeTrack();
@@ -444,6 +474,22 @@ export class App implements OnInit, OnDestroy {
     this.youtubePlayer.setSize(width, height);
   }
 
+  private observeVideoFrame(): void {
+    if (typeof ResizeObserver === 'undefined' || this.frameResizeObserver) {
+      return;
+    }
+
+    const frame = document.querySelector('.video-frame') as HTMLElement | null;
+    if (!frame) {
+      return;
+    }
+
+    this.frameResizeObserver = new ResizeObserver(() => {
+      this.syncYoutubePlayerSize();
+    });
+    this.frameResizeObserver.observe(frame);
+  }
+
   private getRelativeQueueTrack(offset: -1 | 1): Track | null {
     const currentTrack = this.selectedYoutubeTrack();
     if (!currentTrack) {
@@ -470,6 +516,17 @@ export class App implements OnInit, OnDestroy {
     const appendedTracks = freshTracks.filter((track) => !preservedIds.has(track.videoId));
 
     return [...preservedOrder, ...appendedTracks];
+  }
+
+  private shuffleTracks(tracks: Track[]): Track[] {
+    const shuffledTracks = [...tracks];
+
+    for (let index = shuffledTracks.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [shuffledTracks[index], shuffledTracks[swapIndex]] = [shuffledTracks[swapIndex], shuffledTracks[index]];
+    }
+
+    return shuffledTracks;
   }
 
   private formatFetchedAt(value: string): string {
