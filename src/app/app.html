@@ -1,7 +1,19 @@
 <div class="shell">
   <header class="topbar">
     <div class="brand-lockup">
-      <span class="brand-mark"></span>
+      <a
+        class="brand-mark"
+        [href]="instagramUrl"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Apri il profilo Instagram di YNG ERRE"
+      >
+        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+          <path
+            d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5A3.95 3.95 0 0 0 7.75 20.2h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5Zm4.25 2.9a5.3 5.3 0 1 1 0 10.6 5.3 5.3 0 0 1 0-10.6Zm0 1.8a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm5.6-.95a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Z"
+          />
+        </svg>
+      </a>
       <div>
         <p class="eyebrow">Artist player</p>
         <h1>{{ artistName }}</h1>
@@ -321,23 +333,41 @@
       <div class="player-grid">
         <article class="video-panel">
           <div class="video-panel__meta">
-            <p class="eyebrow">Feed social</p>
-            <h4>Anteprima del profilo Instagram</h4>
-            <p>Una sezione dedicata ai contenuti pubblicati su Instagram, visibile direttamente nel sito.</p>
+            <p class="eyebrow">Profilo ufficiale</p>
+            <h4>Instagram di &#64;yngerreproductions</h4>
+            <p>Accesso diretto al profilo ufficiale, senza widget vuoti o embed instabili.</p>
           </div>
 
-          <div class="instagram-frame">
-            <blockquote
-              class="instagram-media"
-              [attr.data-instgrm-permalink]="instagramUrl"
-              data-instgrm-version="14"
-              data-instgrm-captioned
-              style="background:#fff;border:0;border-radius:1.5rem;margin:0;max-width:33rem;min-width:0;width:100%;"
-            ></blockquote>
-          </div>
+          <a class="instagram-profile-card" [href]="instagramUrl" target="_blank" rel="noreferrer">
+            <span class="instagram-profile-card__badge">Instagram</span>
+            <div class="instagram-profile-card__hero">
+              <span class="instagram-profile-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path
+                    d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5A3.95 3.95 0 0 0 7.75 20.2h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5Zm4.25 2.9a5.3 5.3 0 1 1 0 10.6 5.3 5.3 0 0 1 0-10.6Zm0 1.8a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm5.6-.95a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Z"
+                  />
+                </svg>
+              </span>
+              <div class="instagram-profile-card__copy">
+                <strong>&#64;yngerreproductions</strong>
+                <span>Apri il profilo per vedere post, reel e aggiornamenti.</span>
+              </div>
+            </div>
+
+            <div class="instagram-profile-card__preview" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+
+            <span class="instagram-profile-card__cta">Apri Instagram</span>
+          </a>
 
           <div class="video-panel__footer">
-            <span>Se il widget non si carica subito, Instagram potrebbe richiedere qualche istante in piu.</span>
+            <span>Il profilo viene mostrato come card diretta, cosi non resta piu un riquadro vuoto.</span>
             <a [href]="instagramUrl" target="_blank" rel="noreferrer">Apri Instagram</a>
           </div>
         </article>
@@ -349,8 +379,7 @@
           </div>
 
           <p class="queue-note">
-            Il feed viene incorporato direttamente dal profilo Instagram per rendere i post visibili anche senza uscire
-            dal sito.
+            Questa sezione punta direttamente al profilo ufficiale, con un accesso chiaro e immediato da mobile e desktop.
           </p>
 
           <a class="secondary-action" [href]="instagramUrl" target="_blank" rel="noreferrer">

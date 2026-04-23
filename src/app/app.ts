@@ -38,11 +38,6 @@ type AppleRelease = {
 
 declare global {
   interface Window {
-    instgrm?: {
-      Embeds?: {
-        process: () => void;
-      };
-    };
     YT?: {
       Player: new (
         elementId: string,
@@ -188,7 +183,6 @@ export class App implements OnInit, OnDestroy {
   ngOnInit(): void {
     void this.loadVideos();
     void this.initializeYouTubeApi();
-    void this.initializeInstagramEmbeds();
     window.addEventListener('resize', this.handleWindowResize);
     this.refreshIntervalId = setInterval(() => {
       void this.loadVideos();
@@ -461,35 +455,6 @@ export class App implements OnInit, OnDestroy {
     });
 
     this.createYoutubePlayer();
-  }
-
-  private async initializeInstagramEmbeds(): Promise<void> {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    if (window.instgrm?.Embeds) {
-      window.instgrm.Embeds.process();
-      return;
-    }
-
-    await new Promise<void>((resolve) => {
-      const existingScript = document.querySelector('script[src="https://www.instagram.com/embed.js"]');
-      if (existingScript) {
-        existingScript.addEventListener('load', () => resolve(), { once: true });
-        existingScript.addEventListener('error', () => resolve(), { once: true });
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://www.instagram.com/embed.js';
-      script.async = true;
-      script.addEventListener('load', () => resolve(), { once: true });
-      script.addEventListener('error', () => resolve(), { once: true });
-      document.body.appendChild(script);
-    });
-
-    window.instgrm?.Embeds?.process();
   }
 
   private createYoutubePlayer(): void {
