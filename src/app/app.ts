@@ -36,6 +36,18 @@ type AppleRelease = {
   embedUrl: string;
 };
 
+type InstagramPost = {
+  id: string;
+  code: string;
+  type: 'Post' | 'Reel';
+  caption: string;
+  permalink: string;
+  embedUrl: string;
+  thumbnailUrl: string;
+  likeCount: number | null;
+  commentCount: number | null;
+};
+
 declare global {
   interface Window {
     YT?: {
@@ -133,6 +145,8 @@ export class App implements OnInit, OnDestroy {
   protected readonly playbackQueue = signal<Track[]>([]);
   protected readonly selectedYoutubeTrack = signal<Track | null>(null);
   protected readonly selectedAppleRelease = signal<AppleRelease>(this.appleReleases[0]);
+  protected readonly instagramPosts = signal<InstagramPost[]>([]);
+  protected readonly selectedInstagramPost = signal<InstagramPost | null>(null);
   protected readonly activeFilter = signal<'Tutti' | TrackType>('Tutti');
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal('');
@@ -180,8 +194,16 @@ export class App implements OnInit, OnDestroy {
     this.sanitizer.bypassSecurityTrustResourceUrl(this.selectedAppleRelease().embedUrl)
   );
 
+  protected readonly instagramPlayerUrl = computed<SafeResourceUrl | null>(() => {
+    const selectedPost = this.selectedInstagramPost();
+    return selectedPost
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(selectedPost.embedUrl)
+      : null;
+  });
+
   ngOnInit(): void {
     void this.loadVideos();
+    void this.loadInstagramPosts();
     void this.initializeYouTubeApi();
     window.addEventListener('resize', this.handleWindowResize);
     this.refreshIntervalId = setInterval(() => {
@@ -209,7 +231,7 @@ export class App implements OnInit, OnDestroy {
   }
 
   protected async refreshVideos(): Promise<void> {
-    await this.loadVideos();
+    await Promise.all([this.loadVideos(), this.loadInstagramPosts()]);
   }
 
   protected selectYoutubeTrack(track: Track): void {
@@ -237,6 +259,10 @@ export class App implements OnInit, OnDestroy {
 
   protected selectAppleRelease(release: AppleRelease): void {
     this.selectedAppleRelease.set(release);
+  }
+
+  protected selectInstagramPost(post: InstagramPost): void {
+    this.selectedInstagramPost.set(post);
   }
 
   protected playPreviousTrack(): void {
@@ -427,6 +453,31 @@ export class App implements OnInit, OnDestroy {
       this.errorMessage.set('In questo momento non riesco a caricare i contenuti YouTube. Riprova tra poco.');
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private async loadInstagramPosts(): Promise<void> {
+    try {
+      const response = await fetch('/api/instagram-posts', {
+        headers: {
+          Accept: 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Instagram catalog request failed with status ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { items?: InstagramPost[] };
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      this.instagramPosts.set(items);
+
+      const currentPost = this.selectedInstagramPost();
+      if (!currentPost || !items.some((post) => post.id === currentPost.id)) {
+        this.selectedInstagramPost.set(items[0] ?? null);
+      }
+    } catch (error) {
+      console.error(error);
     }
   }
 

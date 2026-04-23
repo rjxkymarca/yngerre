@@ -332,59 +332,66 @@
 
       <div class="player-grid">
         <article class="video-panel">
-          <div class="video-panel__meta">
-            <p class="eyebrow">Profilo ufficiale</p>
-            <h4>Instagram di &#64;yngerreproductions</h4>
-            <p>Accesso diretto al profilo ufficiale, senza widget vuoti o embed instabili.</p>
-          </div>
+          @if (selectedInstagramPost(); as currentInstagramPost) {
+            <div class="video-panel__meta">
+              <p class="eyebrow">{{ currentInstagramPost.type }}</p>
+              <h4>Instagram di &#64;yngerreproductions</h4>
+              <p>{{ currentInstagramPost.caption }}</p>
+            </div>
 
-          <a class="instagram-profile-card" [href]="instagramUrl" target="_blank" rel="noreferrer">
-            <span class="instagram-profile-card__badge">Instagram</span>
-            <div class="instagram-profile-card__hero">
-              <span class="instagram-profile-card__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path
-                    d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5A3.95 3.95 0 0 0 7.75 20.2h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5Zm4.25 2.9a5.3 5.3 0 1 1 0 10.6 5.3 5.3 0 0 1 0-10.6Zm0 1.8a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm5.6-.95a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Z"
-                  />
-                </svg>
+            <div class="instagram-frame">
+              <iframe
+                [src]="instagramPlayerUrl()"
+                title="Instagram embed del contenuto selezionato"
+                loading="lazy"
+                allowfullscreen
+              ></iframe>
+            </div>
+
+            <div class="video-panel__footer">
+              <span>
+                @if (currentInstagramPost.likeCount !== null || currentInstagramPost.commentCount !== null) {
+                  {{ currentInstagramPost.likeCount ?? 0 }} like · {{ currentInstagramPost.commentCount ?? 0 }} commenti
+                } @else {
+                  Contenuto pubblico incorporato direttamente da Instagram.
+                }
               </span>
-              <div class="instagram-profile-card__copy">
-                <strong>&#64;yngerreproductions</strong>
-                <span>Apri il profilo per vedere post, reel e aggiornamenti.</span>
-              </div>
+              <a [href]="currentInstagramPost.permalink" target="_blank" rel="noreferrer">Apri su Instagram</a>
             </div>
-
-            <div class="instagram-profile-card__preview" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
+          } @else {
+            <div class="video-panel__placeholder">
+              <p class="eyebrow">Instagram</p>
+              <strong>Caricamento contenuti in corso.</strong>
+              <span>Sto recuperando i post pubblici del profilo ufficiale.</span>
             </div>
-
-            <span class="instagram-profile-card__cta">Apri Instagram</span>
-          </a>
-
-          <div class="video-panel__footer">
-            <span>Il profilo viene mostrato come card diretta, cosi non resta piu un riquadro vuoto.</span>
-            <a [href]="instagramUrl" target="_blank" rel="noreferrer">Apri Instagram</a>
-          </div>
+          }
         </article>
 
         <aside class="queue-panel">
           <div class="queue-panel__heading">
-            <p class="eyebrow">Profilo</p>
-            <h4>&#64;yngerreproductions</h4>
+            <p class="eyebrow">Selezione</p>
+            <h4>Post e reel recenti</h4>
+          </div>
+
+          <div class="release-list">
+            @for (post of instagramPosts(); track post.id) {
+              <button
+                type="button"
+                class="release-item"
+                [class.is-active]="selectedInstagramPost()?.id === post.id"
+                (click)="selectInstagramPost(post)"
+              >
+                <strong>{{ post.type }}</strong>
+                <small>{{ post.caption }}</small>
+              </button>
+            }
           </div>
 
           <p class="queue-note">
-            Questa sezione punta direttamente al profilo ufficiale, con un accesso chiaro e immediato da mobile e desktop.
+            La sezione usa un embed reale di Instagram del contenuto selezionato, aggiornato dai post pubblici del profilo.
           </p>
 
-          <a class="secondary-action" [href]="instagramUrl" target="_blank" rel="noreferrer">
-            Vai al profilo
-          </a>
+          <a class="secondary-action" [href]="instagramUrl" target="_blank" rel="noreferrer">Vai al profilo</a>
         </aside>
       </div>
     </section>
